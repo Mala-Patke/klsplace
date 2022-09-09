@@ -1,4 +1,5 @@
 const displayCanvas = document.getElementById('displayCanvas');
+/** @type {CanvasRenderingContext2D} */
 const ctx = displayCanvas.getContext("2d");
 
 let currentRectangle;
@@ -28,15 +29,19 @@ function updateSelectedPixel(e) {
     let pixelX = Math.floor(canvasX / 10);
     let pixelY = Math.floor(canvasY / 10);
 
+    let selectedPixel = $('.selected');
+    if(selectedPixel.length) {
+        ctx.fillStyle = selectedPixel.css('background-color');
+        ctx.fillRect(pixelX, pixelY, 10, 10);   
+    }
+
     drawBorder(pixelX, pixelY);
 
     document.getElementById('tester').innerText = `${pixelX}, ${pixelY}`;
-
 }
 
 displayCanvas.addEventListener('mousemove', e => {
-    if(!paused) updateSelectedPixel(e); 
-
+    if(!paused) updateSelectedPixel(e);
 });
 
 displayCanvas.addEventListener('click', e => {

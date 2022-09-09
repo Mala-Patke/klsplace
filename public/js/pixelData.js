@@ -13,7 +13,7 @@ class Pixel {
     }
 
     async getRef(current = true) {
-        return await Pixel.db.collection(current ? 'pixels' : 'pixelData')
+        return await Pixel.db.collection(current ? 'pixels' : 'pixeldata')
             .where("x", '==', this.x)
             .where("y", '==', this.y)
             .get();
@@ -22,11 +22,12 @@ class Pixel {
     async updateColorUser(colorCode) {
         let localPixel = await this.getRef();
         await localPixel.docs[0].ref.update({colorCode});
-        /*
+        
         let localPixelData = await this.getRef(false);
         await localPixelData.docs[0].ref.update({
-            colorCode: Pixel.FieldValue.arrayUnion(colorCode)
-        });*/
+            prevColorCodes: Pixel.FieldValue.arrayUnion(colorCode),
+            prevUsers: Pixel.FieldValue.arrayUnion($('#username').text()),
+        });
         
         this.colorCode = colorCode;
         
@@ -51,58 +52,81 @@ class Pixel {
     static db;
     static FieldValue;
     static ctx;
-    static colorCodes = {
-        0: 'white',
-        1: 'black',
-        2: 'red',
-        3: 'green',
-        4: 'blue'
-    }
+    static colorCodes = [
+        'white',
+        'black',
+        'red',
+        'green',
+        'blue'
+    ]
+}
+
+function cButtonOnClick({ target }) {
+    $('.cbutton')
+        .removeClass('selected');
+    $(target)
+        .addClass('selected');
+}
+
+function placePixel() {
+    let color = $('.selected').attr('code');
+    let { x, y } = currentRectangle;
+    let pixel = pixels[x][y];
     
+    console.log(pixel, currentRectangle);
+    pixel.updateColorUser(color);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log("DOM Content loaded!")
+    //Init
     const db = firebase.firestore();
-
     Pixel.db = db;
     Pixel.FieldValue = firebase.firestore.FieldValue;
     Pixel.ctx = document.getElementById('pixelCanvas').getContext('2d');
 
-    //* Create and add test data for emulator. DELETE IN PROD 
-    let inc = 0
+    //Create color buttons
+    for(let code in Pixel.colorCodes) {
+        $(document.createElement('button'))
+            .addClass('cbutton')
+            .attr('code', code)
+            .css('background-color', Pixel.colorCodes[code])
+            .on('click', cButtonOnClick)
+            .appendTo('#colors')
+    }
+
+    /* Create and add test data for emulator. DELETE IN PROD 
+    let inc = -1;
     for(let y = 0; y < 10; y++) {
         for(let x = 0; x < 10; x++) {
-            await db.collection('pixels').doc(`${inc++}`).set({
+            console.log(x, y);
+            await db.collection('pixels').doc(`${++inc}`).set({
                 x,
                 y,
                 colorCode:0
             });
+
+            await db.collection('pixeldata').doc(`${inc}`).set({
+                x,
+                y,
+                prevColorCodes: [],
+                prevUsers: []
+            });
         }
     } //*/
 
+    //Initialize pixel data locally and sort
+    let docArray = await db.collection('pixels').get();
+    docArray.forEach(doc => {
+        let { x, y, colorCode } = doc.data();
+        pixels[x].push(new Pixel(x, y, colorCode));
+    });
+    for(let pixel of pixels) {
+        pixel.sort((a,b) => a.y - b.y);
+    }
+
     //Update pixels globally on db update
     db.collection('pixels').onSnapshot(snapshot => {
-        //Initial load
-        if(uninitialized) {
-            uninitialized = false;
-
-            //Load and format all pixel data
-            let docArray = Array.from(snapshot.docs).sort((a, b) => parseInt(a.id) - parseInt(b.id));
-            for(let doc of docArray) {
-                let { x, y, colorCode } = doc.data();
-                pixels[x].push(new Pixel(x, y, colorCode));
-            }
-
-            //Color pixels on canvas
-            for(let row of pixels) {
-                for(let pixel of row) {
-                    pixel.updateCanvas();
-                }
-            }
-
-            return;
-        }
-
         //Update canvas on server change
         snapshot.docChanges().forEach(change => {
             if(snapshot.metadata.hasPendingWrites) return;

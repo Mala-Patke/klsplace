@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         let uDisplay = document.createElement('div');
         $(uDisplay)
+            .attr('id', 'username')
             .text(currentUser.displayName)
             .appendTo('#loggedin');
     }

@@ -22,8 +22,24 @@ canvas {
     display: flex;
     height: 100%;
     width: 100%;
-    justify-content: space-between;
+    /* justify-content: space-between; */
     align-items: center;
     flex-direction: column;
 }
 
+#colors {
+    border-radius: 25px;
+    border: 1px solid black;
+    padding: 25px 30px;
+}
+
+.cbutton {
+    border-radius: 100px;
+    border: 1px solid black;
+    margin: 0px 10px;
+    padding: 15px 15px;
+}
+
+.selected {
+    border: 3px solid rgb(0, 251, 255);
+}
